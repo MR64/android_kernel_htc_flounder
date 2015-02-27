@@ -201,8 +201,23 @@ endmenu
 
 menu "Kernel Features"
 
+config KEXEC
+	bool "Kexec system call (EXPERIMENTAL)"
+	depends on (!SMP || PM_SLEEP_SMP)
+	help
+	  kexec is a system call that implements the ability to shutdown your
+	  current kernel, and to start another kernel.  It is like a reboot
+	  but it is independent of the system firmware.   And like a reboot
+	  you can start any kernel with it, not just Linux.
+
+	  It is an ongoing process to be certain the hardware in a machine
+	  is properly shutdown, so do not be surprised if this code does not
+	  initially work for you.  It may help to enable device hotplugging
+	  support.
+
 config KEXEC_HARDBOOT
 	bool "Support hard booting to a kexec kernel"
+        depends on KEXEC
 	default y
 	help
 	  Allows hard booting (i.e., with a full hardware reboot) to a kernel
@@ -226,6 +241,24 @@ config KEXEC_HARDBOOT
 	  Note that hardboot support is only required in the boot kernel and any
 	  kernel capable of performing a hardboot kexec. It is _not_ required by a
 	  kexec'd kernel. 
+
+config ATAGS
+	bool "Support for the traditional ATAGS boot data passing" if USE_OF
+	default y
+	help
+	  This is the traditional way of passing data to the kernel at boot
+	  time. If you are solely relying on the flattened device tree (or
+	  the ARM_ATAG_DTB_COMPAT option) then you may unselect this option
+	  to remove ATAGS support from your kernel binary.  If unsure,
+	  leave this to y.
+
+config ATAGS_PROC
+	bool "Export atags in procfs"
+	depends on ATAGS && KEXEC
+	default y
+	help
+	  Should the atags used to boot the kernel be exported in an "atags"
+	  file in procfs. Useful with kexec.
 
 config ARM64_64K_PAGES
 	bool "Enable 64KB pages support"
