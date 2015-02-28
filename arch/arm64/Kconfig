@@ -217,7 +217,7 @@ config KEXEC
 
 config KEXEC_HARDBOOT
 	bool "Support hard booting to a kexec kernel"
-        depends on KEXEC
+	depends on KEXEC
 	default y
 	help
 	  Allows hard booting (i.e., with a full hardware reboot) to a kernel
@@ -240,7 +240,7 @@ config KEXEC_HARDBOOT
 	 
 	  Note that hardboot support is only required in the boot kernel and any
 	  kernel capable of performing a hardboot kexec. It is _not_ required by a
-	  kexec'd kernel. 
+	  kexec'd kernel.
 
 config ATAGS
 	bool "Support for the traditional ATAGS boot data passing" if USE_OF
