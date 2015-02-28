@@ -11,6 +11,7 @@
 #include <asm/assembler.h>
 #include <asm/kexec.h>
 #include <asm/memory.h>
+#include <mach-tegra/iomap.h>
 #include <asm/page.h>
 
 /* The list entry flags. */
@@ -113,6 +114,12 @@ relocate_new_kernel:
 	dsb	sy
 	isb
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+	ldr x0, kexec_hardboot
+	cmp x0, #0
+	bne hardboot
+#endif
+
 	/* Start new image. */
 	ldr	x4, arm64_kexec_kimage_start
 	ldr	x0, arm64_kexec_dtb_addr
@@ -120,6 +127,31 @@ relocate_new_kernel:
 	mov	x2, xzr
 	mov	x3, xzr
 	br	x4
+
+#ifdef CONFIG_KEXEC_HARDBOOT
+hardboot:
+	/* Stash boot arguments in hardboot page:
+	* 0: KEXEC_HB_PAGE_MAGIC
+	* 4: kexec_start_address
+	* 8: kexec_mach_type
+	* 12: kexec_boot_atags */
+	ldr	x0, =KEXEC_HB_PAGE_ADDR
+	str	x1, [x0, #4]
+	ldr	x1, kexec_mach_type
+	str	x1, [x0, #8]
+	ldr	x1, kexec_boot_atags
+	str	x1, [x0, #12]
+	ldr	x1, =KEXEC_HB_PAGE_MAGIC
+	str	x1, [x0]
+
+	ldr	x0, =TEGRA_PMC_BASE
+	ldr	x1, [x0]
+	orr	x1, x1, #0x10
+	str	x1, [x0]
+loop:	b	loop
+
+	.ltorg
+#endif
 
 .align 3	/* To keep the 64-bit values below naturally aligned. */
 
@@ -131,6 +163,14 @@ relocate_new_kernel:
  */
 .globl arm64_kexec_kimage_start
 arm64_kexec_kimage_start:
+	.quad	0x0
+
+.globl kexec_mach_type
+kexec_mach_type:
+	.quad	0x0
+
+.globl kexec_boot_atags
+kexec_boot_atags:
 	.quad	0x0
 
 /*
@@ -146,6 +186,12 @@ arm64_kexec_dtb_addr:
 .globl arm64_kexec_kimage_head
 arm64_kexec_kimage_head:
 	.quad	0x0
+
+#ifdef CONFIG_KEXEC_HARDBOOT
+.globl kexec_hardboot
+kexec_hardboot:
+	.quad 0x0
+#endif
 
 .Lrelocate_new_kernel_end:
 
