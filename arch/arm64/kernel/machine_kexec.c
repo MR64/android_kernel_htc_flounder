@@ -26,6 +26,9 @@ extern const unsigned long relocate_new_kernel_size;
 extern unsigned long arm64_kexec_dtb_addr;
 extern unsigned long arm64_kexec_kimage_head;
 extern unsigned long arm64_kexec_kimage_start;
+#ifdef CONFIG_KEXEC_HARDBOOT
+extern unsigned long kexec_hardboot;
+#endif
 
 /**
  * kexec_is_dtb - Helper routine to check the device tree header signature.
@@ -186,6 +189,9 @@ void machine_kexec(struct kimage *image)
 	pr_devel("%s:%d: kexec_kimage_start:       %lx\n", __func__, __LINE__,
 		arm64_kexec_kimage_start);
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+	kexec_hardboot = image->hardboot;
+#endif
 	/*
 	 * Copy relocate_new_kernel to the reboot_code_buffer for use
 	 * after the kernel is shut down.
