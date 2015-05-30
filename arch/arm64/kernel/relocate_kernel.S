@@ -9,13 +9,18 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/kexec.h>
-
 #include <asm/assembler.h>
 #include <asm/kexec.h>
 #include <asm/memory.h>
 #include <asm/page.h>
 
+/* The list entry flags. */
+#define IND_DESTINATION_BIT 0
+#define IND_INDIRECTION_BIT 1
+#define IND_DONE_BIT        2
+#define IND_SOURCE_BIT      3
+
+#define TEGRA_PMC_BASE			0x7000E400
 
 /*
  * relocate_new_kernel - Put a 2nd stage kernel image in place and boot it.
@@ -110,6 +115,12 @@ relocate_new_kernel:
 	dsb	sy
 	isb
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+	ldr	x0, kexec_hardboot
+	cmp	x0, #0
+	bne	hardboot
+#endif
+
 	/* Start new image. */
 	ldr	x4, arm64_kexec_kimage_start
 	mov	x0, xzr
@@ -118,6 +129,36 @@ relocate_new_kernel:
 	mov	x3, xzr
 	br	x4
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+hardboot:
+	/* Stash boot arguments in hardboot page:
+	 *  0: KEXEC_HB_PAGE_MAGIC
+	 *  4: kexec_start_address
+	 *  8: kexec_mach_type (doesn't apply, set to 0)
+	 * 12: kexec_boot_atags
+	 * 16: kexec_boot_atags_len
+	 * 20: kexec_kernel_len */
+	ldr	x0, =KEXEC_HB_PAGE_ADDR
+	str	x1, [x0, #4]
+	ldr	x1, #0
+	str	x1, [x0, #8]
+	ldr	x1, kexec_boot_atags
+	str	x1, [x0, #12]
+	ldr	x1, kexec_boot_atags_len
+	str	x1, [x0, #16]
+	ldr	x1, kexec_kernel_len
+	str	x1, [x0, #20]
+	ldr	x1, =KEXEC_HB_PAGE_MAGIC
+	str	x1, [x0]
+
+	ldr     x0, =TEGRA_PMC_BASE
+	ldr	x1, [x0]
+	orr	x1, x1, #0x10
+	str	x1, [x0]
+loop:	b	loop
+
+	.ltorg
+#endif
 .align 3	/* To keep the 64-bit values below naturally aligned. */
 
 /* The machine_kexec routines set these variables. */
@@ -129,6 +170,24 @@ relocate_new_kernel:
 .globl arm64_kexec_kimage_start
 arm64_kexec_kimage_start:
 	.quad	0x0
+
+#ifdef CONFIG_KEXEC_HARDBOOT
+	.globl kexec_boot_atags
+kexec_boot_atags:
+	.quad	0x0
+
+	.globl kexec_boot_atags_len
+kexec_boot_atags_len:
+	.quad	0x0
+
+	.globl kexec_kernel_len
+kexec_kernel_len:
+	.quad	0x0
+
+	.globl kexec_hardboot
+kexec_hardboot:
+	.quad	0x0
+#endif
 
 /*
  * arm64_kexec_kimage_head - Copy of image->head, the list of kimage entries.

@@ -30,6 +30,10 @@
 #include <mach/memory.h>
 #endif
 
+#if defined(CONFIG_KEXEC_HARDBOOT)
+#define KEXEC_HB_PAGE_ADDR             UL(0xF5B00000)
+#endif
+
 /*
  * Allow for constants defined here to be used from assembly code
  * by prepending the UL suffix only with actual C code compilation.
